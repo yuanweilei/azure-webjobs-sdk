@@ -14,7 +14,6 @@ using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Host.Listeners
 {
@@ -33,9 +32,10 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
         private readonly IScaleMonitorManager _monitorManager;
         private readonly ITargetScalerManager _targetScalerManager;
         private readonly IDrainModeManager _drainModeManager;
+        private readonly IEnumerable<IListenerDecorator> _listenerDecorators;
 
         public HostListenerFactory(IEnumerable<IFunctionDefinition> functionDefinitions, SingletonManager singletonManager, IJobActivator activator,
-            INameResolver nameResolver, ILoggerFactory loggerFactory, IScaleMonitorManager monitorManager, ITargetScalerManager targetScalerManager, Action listenersCreatedCallback, bool allowPartialHostStartup = false, IDrainModeManager drainModeManager = null)
+            INameResolver nameResolver, ILoggerFactory loggerFactory, IScaleMonitorManager monitorManager, ITargetScalerManager targetScalerManager, IEnumerable<IListenerDecorator> listenerDecorators, Action listenersCreatedCallback, bool allowPartialHostStartup = false, IDrainModeManager drainModeManager = null)
         {
             _functionDefinitions = functionDefinitions;
             _singletonManager = singletonManager;
@@ -46,6 +46,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
             _allowPartialHostStartup = allowPartialHostStartup;
             _monitorManager = monitorManager;
             _targetScalerManager = targetScalerManager;
+            _listenerDecorators = listenerDecorators;
             _listenersCreatedCallback = listenersCreatedCallback;
             _drainModeManager = drainModeManager;
         }
@@ -71,19 +72,26 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
                 }
 
                 IListener listener = await listenerFactory.CreateAsync(cancellationToken);
-
                 RegisterScaleMonitor(listener, _monitorManager);
                 RegisterTargetScaler(listener, _targetScalerManager);
-                
-                // if the listener is a Singleton, wrap it with our SingletonListener
                 SingletonAttribute singletonAttribute = SingletonManager.GetListenerSingletonOrNull(listener.GetType(), functionDefinition.Descriptor);
+
+                // Consult any registered listener decorators to see if they want to wrap the listener.
+                foreach (var decorator in _listenerDecorators)
+                {
+                    var context = new ListenerDecoratorContext(functionDefinition, listener);
+                    listener = decorator.Decorate(context);
+                }
+
+                // if the listener is a Singleton, wrap it with our SingletonListener
                 if (singletonAttribute != null)
                 {
                     listener = new SingletonListener(functionDefinition.Descriptor, singletonAttribute, _singletonManager, listener, _loggerFactory);
                 }
 
                 // wrap the listener with a function listener to handle exceptions
-                listener = new FunctionListener(listener, functionDefinition.Descriptor, _loggerFactory, _allowPartialHostStartup);
+                FunctionListener functionListener = new FunctionListener(listener, functionDefinition.Descriptor, _loggerFactory, _allowPartialHostStartup);
+                listener = functionListener;
                 listeners.Add(listener);
             }
 
@@ -91,6 +99,7 @@ namespace Microsoft.Azure.WebJobs.Host.Listeners
 
             var compositeListener = new CompositeListener(listeners);
             _drainModeManager?.RegisterListener(compositeListener);
+            
             return compositeListener;
         }
 

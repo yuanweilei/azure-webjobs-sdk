@@ -61,7 +61,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             var monitorManager = new ScaleMonitorManager();
             var targetScaleManager = new TargetScalerManager();
             var drainModeManagerMock = new Mock<IDrainModeManager>();
-            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManager, targetScaleManager, () => { }, false, drainModeManagerMock.Object);
+            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManager, targetScaleManager, null, () => { }, false, drainModeManagerMock.Object);
             IListener listener = await factory.CreateAsync(CancellationToken.None);
 
             var innerListeners = ((IEnumerable<IListener>)listener).ToArray();
@@ -94,7 +94,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             var monitorManager = new ScaleMonitorManager();
             var targetScaleManager = new TargetScalerManager();
             var drainModeManagerMock = new Mock<IDrainModeManager>();
-            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManager, targetScaleManager, () => { }, false, drainModeManagerMock.Object);
+            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManager, targetScaleManager, null, () => { }, false, drainModeManagerMock.Object);
             IListener listener = await factory.CreateAsync(CancellationToken.None);
 
             var innerListeners = ((IEnumerable<IListener>)listener).ToArray();
@@ -204,7 +204,7 @@ namespace Microsoft.Azure.WebJobs.Host.UnitTests.Listeners
             var monitorManagerMock = new Mock<IScaleMonitorManager>(MockBehavior.Strict);
             var targetScalerManagerMock = new Mock<ITargetScalerManager>(MockBehavior.Strict);
             var drainModeManagerMock = new Mock<IDrainModeManager>();
-            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManagerMock.Object, targetScalerManagerMock.Object, () => { }, false, drainModeManagerMock.Object);
+            HostListenerFactory factory = new HostListenerFactory(functions, singletonManager, _jobActivator, null, loggerFactory, monitorManagerMock.Object, targetScalerManagerMock.Object, null, () => { }, false, drainModeManagerMock.Object);
 
             IListener listener = await factory.CreateAsync(CancellationToken.None);
 
